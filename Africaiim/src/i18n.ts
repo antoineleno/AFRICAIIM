@@ -9,7 +9,7 @@ const resources = {
       nav: {
         home: "Home",
         about: "About",
-        program: "Program",
+        programs: "Programs",
         eventsNews: "Events & News",
         campusLife: "Campus Life",
         contactUs: "Contact Us",
@@ -20,7 +20,7 @@ const resources = {
       hero: {
         title: "AFRICA INTERNATIONAL INSTITUTE FOR MANAGEMENT",
         subtitle: "Excellence in Education, Empowering Africa's Future Leaders",
-        exploreProgram: "Explore Program"
+        exploreProgram: "Explore Programs"
       },
       
       // About Section
@@ -99,16 +99,24 @@ const resources = {
       // Chancellor Message
       chancellor: {
         label: "A Word from Our Leadership",
-        heading: "Chancellor's Message",
-        chancellorName: "Chancellor Dr. Mohamed Camara",
-        openingQuote: "At AFRICAIIM, we are not simply educating students—we are nurturing the next generation of African leaders who will shape the future of our continent and the world.",
-        paragraph1: "Our vision is clear: to create a bridge between African excellence and global opportunities. Through our innovative bilingual program, we prepare students not just academically, but holistically—developing critical thinkers, ethical leaders, and global citizens.",
-        paragraph2: "Every student who walks through our doors embarks on a transformative journey. From mastering multiple languages to gaining admission to the world's most prestigious universities, our graduates are proving that African talent, when properly nurtured, can compete and excel on any global stage.",
-        paragraph3: "I invite you to join us in this mission. Together, we are building not just careers, but legacies that will impact generations to come.",
-        closingQuote: "Education is not the filling of a pail, but the lighting of a fire. At AFRICAIIM, we ignite that fire in every student.",
-        signature: "Dr. Mohamed Camara",
-        signatureTitle: "Chancellor & Founder",
-        institutionName: "The African Institute for Management and Innovation"
+        heading: "Professors' Messages",
+        professors: [
+          {
+            name: "Dr HUBERT SILLY",
+            title: "Rector of AFRICAIIM University, education expert and psychometrics specialist",
+            message: "A demanding program that develops solid strategic thinking, based on analysis and decision-making. This master's will also enable you to learn business mathematics and business English through TOEIC validation."
+          },
+          {
+            name: "KARIM DEHIMI",
+            title: "Director of Wes'Sup Schools Geneva and Lyon, Grande École de Management",
+            message: "This master's program trains decision-makers capable of anticipating economic changes and steering financial performance with rigor and strategic vision."
+          },
+          {
+            name: "RADJKOUMAR DAMIEN",
+            title: "Head of Banking, Real Estate, Notary division at Esup Paris la Défense, Grande École de Commerce, and Head of degree programs and international programs at AFRICAIIM Business School, Conakry",
+            message: "Financial performance goes hand in hand with commercial development. An entire section of this master's is dedicated to this theme in order to combine strategy, finance and commercial development."
+          }
+        ]
       },
       
       // Events & News
@@ -429,16 +437,16 @@ const resources = {
         step1Description: "Complete the online application form with your personal information, academic records, and motivation letter.",
         step1Timeline: "Rolling Admissions",
         step2Title: "Document Review",
-        step2Description: "Our admissions team carefully reviews your academic transcripts, English proficiency scores, and supporting documents.",
+        step2Description: "Our admissions team carefully reviews your recent ID photo, ID/passport copy, certified transcripts from the last two years, diplomas/certificates, motivation essay, and CV (for Bachelor 2/3 and Master applicants).",
         step2Timeline: "2-3 Weeks",
         step3Title: "Admission Interview",
-        step3Description: "Selected candidates participate in a personal interview to discuss their goals, motivations, and fit with our program.",
+        step3Description: "Selected candidates participate in a personal interview to discuss their goals, motivations, and fit with our program. Results will be sent via email.",
         step3Timeline: "1-2 Weeks",
         step4Title: "Admission Decision",
-        step4Description: "Receive your admission decision via email. Successful candidates will receive an official acceptance letter and enrollment details.",
+        step4Description: "Receive your admission decision via email. Successful candidates will be invited to the university to make their first payment and confirm their enrollment as a student.",
         step4Timeline: "1 Week",
         step5Title: "Enrollment & Registration",
-        step5Description: "Confirm your enrollment by paying the deposit and completing registration. Attend the orientation program to begin your journey.",
+        step5Description: "Confirm your enrollment by paying the first trench of scholarship fees and completing registration. Attend the orientation program to begin your journey.",
         step5Timeline: "2-4 Weeks",
         needHelp: "Need Help?",
         needHelpText: "Our admissions team is here to support you throughout the process. Contact us at",
@@ -517,11 +525,11 @@ const resources = {
         description: "Empowering Africa's future leaders through excellence in bilingual education and global partnerships.",
         quickLinks: "Quick Links",
         aboutUs: "About Us",
-        program: "Program",
+        program: "Programs",
         eventsNews: "Events & News",
         campusLife: "Campus Life",
         contactInfo: "Contact Information",
-        location: "Kipe, Conakry, Guinea",
+        location: "Guinea, Conakry, KIPÉ T2",
         followUs: "Follow Us",
         allRights: "All rights reserved.",
         privacyPolicy: "Privacy Policy",
@@ -542,7 +550,7 @@ const resources = {
       nav: {
         home: "Accueil",
         about: "À Propos",
-        program: "Programme",
+        programs: "Programmes",
         eventsNews: "Événements & Actualités",
         campusLife: "Vie de Campus",
         contactUs: "Contactez-nous",
@@ -553,7 +561,7 @@ const resources = {
       hero: {
         title: "INSTITUT INTERNATIONAL AFRICAIN DE MANAGEMENT",
         subtitle: "Excellence en Éducation, Autonomiser les Futurs Leaders de l'Afrique",
-        exploreProgram: "Explorer le Programme"
+        exploreProgram: "Explorer les Programmes"
       },
       
       // About Section
@@ -632,16 +640,24 @@ const resources = {
       // Chancellor Message
       chancellor: {
         label: "Un Mot de Notre Direction",
-        heading: "Message du Chancelier",
-        chancellorName: "Chancelier Dr. Mohamed Camara",
-        openingQuote: "À AFRICAIIM, nous ne formons pas simplement des étudiants—nous cultivons la prochaine génération de leaders africains qui façonneront l'avenir de notre continent et du monde.",
-        paragraph1: "Notre vision est claire : créer un pont entre l'excellence africaine et les opportunités mondiales. Grâce à notre programme bilingue innovant, nous préparons les étudiants non seulement académiquement, mais de manière holistique—développant des penseurs critiques, des leaders éthiques et des citoyens du monde.",
-        paragraph2: "Chaque étudiant qui franchit nos portes entreprend un voyage transformateur. De la maîtrise de plusieurs langues à l'admission dans les universités les plus prestigieuses du monde, nos diplômés prouvent que le talent africain, lorsqu'il est correctement cultivé, peut rivaliser et exceller sur n'importe quelle scène mondiale.",
-        paragraph3: "Je vous invite à nous rejoindre dans cette mission. Ensemble, nous construisons non seulement des carrières, mais des héritages qui impacteront les générations à venir.",
-        closingQuote: "L'éducation n'est pas le remplissage d'un seau, mais l'allumage d'un feu. À AFRICAIIM, nous allumons ce feu chez chaque étudiant.",
-        signature: "Dr. Mohamed Camara",
-        signatureTitle: "Chancelier & Fondateur",
-        institutionName: "L'Institut Africain de Management et d'Innovation"
+        heading: "Mot des Professeurs",
+        professors: [
+          {
+            name: "Dr HUBERT SILLY",
+            title: "Recteur de l'université AFRICAIIM, expert en éducation et spécialiste de la psychométrie",
+            message: "Un programme exigeant qui développe une pensée stratégique solide, fondée sur l'analyse et la prise de décision. Ce master vous permettra aussi d'apprendre les mathématiques des affaires ainsi que l'anglais pour les affaires par le biais d'une validation du TOEIC."
+          },
+          {
+            name: "KARIM DEHIMI",
+            title: "Dirigeant des écoles Wes'Sup Genève et Lyon, grande école de management",
+            message: "Ce master forme des décideurs capables d'anticiper les mutations économiques et de piloter la performance financière avec rigueur et vision stratégique."
+          },
+          {
+            name: "RADJKOUMAR DAMIEN",
+            title: "Responsable de pôle Banque, Immobilier, Notariat, Esup Paris la Défense, Grande École de Commerce. Et Responsable des parcours diplômants et parcours internationaux à AFRICAIIM Business School, Conakry",
+            message: "La performance financière va de paire avec le développement commercial. Un volet entier de ce master est réservé à cette thématique afin d'allier stratégie, finance et développement commercial."
+          }
+        ]
       },
       
       // Events & News
@@ -962,16 +978,16 @@ const resources = {
         step1Description: "Remplissez le formulaire de candidature en ligne avec vos informations personnelles, dossiers académiques et lettre de motivation.",
         step1Timeline: "Admissions continues",
         step2Title: "Examen des documents",
-        step2Description: "Notre équipe d'admission examine attentivement vos relevés académiques, scores de compétence en anglais et documents à l'appui.",
+        step2Description: "Notre équipe d'admission examine attentivement votre photo d'identité récente, copie de pièce d'identité/passeport, relevés certifiés des deux dernières années, diplômes/attestations, essai de motivation et CV (pour les candidats Bachelor 2/3 et Master).",
         step2Timeline: "2-3 semaines",
         step3Title: "Entretien d'admission",
-        step3Description: "Les candidats sélectionnés participent à un entretien personnel pour discuter de leurs objectifs, motivations et compatibilité avec notre programme.",
+        step3Description: "Les candidats sélectionnés participent à un entretien personnel pour discuter de leurs objectifs, motivations et compatibilité avec notre programme. Les résultats seront envoyés par e-mail.",
         step3Timeline: "1-2 semaines",
         step4Title: "Décision d'admission",
-        step4Description: "Recevez votre décision d'admission par e-mail. Les candidats retenus recevront une lettre d'acceptation officielle et les détails d'inscription.",
+        step4Description: "Recevez votre décision d'admission par e-mail. Les candidats retenus seront invités à l'université pour effectuer leur premier paiement et confirmer leur inscription en tant qu'étudiant.",
         step4Timeline: "1 semaine",
         step5Title: "Inscription et enregistrement",
-        step5Description: "Confirmez votre inscription en payant l'acompte et en complétant l'enregistrement. Assistez au programme d'orientation pour commencer votre parcours.",
+        step5Description: "Confirmez votre inscription en payant la première tranche des frais de scolarité et en complétant l'enregistrement. Assistez au programme d'orientation pour commencer votre parcours.",
         step5Timeline: "2-4 semaines",
         needHelp: "Besoin d'aide ?",
         needHelpText: "Notre équipe d'admission est là pour vous accompagner tout au long du processus. Contactez-nous à",
@@ -1050,11 +1066,11 @@ const resources = {
         description: "Autonomiser les futurs leaders de l'Afrique grâce à l'excellence en éducation bilingue et aux partenariats mondiaux.",
         quickLinks: "Liens Rapides",
         aboutUs: "À Propos",
-        program: "Programme",
+        program: "Programmes",
         eventsNews: "Événements & Actualités",
         campusLife: "Vie de Campus",
         contactInfo: "Informations de Contact",
-        location: "Kipe, Conakry, Guinée",
+        location: "Guinée, Conakry, KIPÉ T2",
         followUs: "Suivez-nous",
         allRights: "Tous droits réservés.",
         privacyPolicy: "Politique de Confidentialité",

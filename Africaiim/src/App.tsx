@@ -57,7 +57,7 @@ export default function App() {
       <Navigation onNavigateToAuth={() => setCurrentPage('auth')} />
       <Hero onNavigateToAuth={() => setCurrentPage('auth')} />
       <About />
-      <Programs />
+      <Programs onNavigateToAuth={() => setCurrentPage('auth')} />
       <ChancellorMessage />
       <EventsNews />
       <Campus onNavigateToAuth={() => setCurrentPage('auth')} />

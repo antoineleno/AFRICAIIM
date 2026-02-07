@@ -60,5 +60,6 @@
     server: {
       port: 3000,
       open: true,
+      allowedHosts: ['frowsily-hunterlike-eneida.ngrok-free.dev'],
     },
   });

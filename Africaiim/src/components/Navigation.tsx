@@ -14,6 +14,10 @@ export function Navigation({ onNavigateToAuth }: NavigationProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('');
   const [language, setLanguage] = useState<'EN' | 'FR'>(i18n.language === 'fr' ? 'FR' : 'EN');
+  const [isProgramsOpen, setIsProgramsOpen] = useState(false);
+  const [isBachelorOpen, setIsBachelorOpen] = useState(false);
+  const [isMasterOpen, setIsMasterOpen] = useState(false);
+  const [masterCategoryOpen, setMasterCategoryOpen] = useState<string | null>(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -49,11 +53,37 @@ export function Navigation({ onNavigateToAuth }: NavigationProps) {
   const navItems = [
     { label: t('nav.home'), href: '#', id: 'home' },
     { label: t('nav.about'), href: '#about', id: 'about' },
-    { label: t('nav.program'), href: '#programs', id: 'programs' },
+  ];
+
+  const navItemsAfter = [
     { label: t('nav.eventsNews'), href: '#events-news', id: 'events-news' },
     { label: t('nav.campusLife'), href: '#campus', id: 'campus' },
     { label: t('nav.contactUs'), href: '#apply', id: 'apply' },
   ];
+
+  const bachelorPrograms = [
+    { label: 'Bachelor Grande École - Management & IA', href: '#programs' },
+    { label: 'Bachelor Banque & Assurance', href: '#programs' },
+    { label: 'Bachelor Comptabilité & Gestion', href: '#programs' },
+  ];
+
+  const masterCategories = [
+    { label: 'Business Management', id: 'management' },
+    { label: 'Business Specializations', id: 'specializations' },
+  ];
+
+  const masterProgramsByCategory = {
+    management: [
+      { label: 'Master Transformation Digitale', href: '#programs' },
+      { label: 'Master RH', href: '#programs' },
+      { label: 'Master Gestion de Projets', href: '#programs' },
+    ],
+    specializations: [
+      { label: 'Master Cybersécurité', href: '#programs' },
+      { label: 'Master Ingénierie Financière', href: '#programs' },
+      { label: 'Master Supply Chain', href: '#programs' },
+    ],
+  };
 
   return (
     <AnimatePresence>
@@ -94,6 +124,164 @@ export function Navigation({ onNavigateToAuth }: NavigationProps) {
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: index * 0.1 }}
+                    className={`text-lg font-medium transition-all duration-300 relative whitespace-nowrap ${
+                      activeSection === item.id
+                        ? 'text-[#d4a574]'
+                        : 'text-gray-700 hover:text-[#1a5443]'
+                    }`}
+                    whileHover={{ scale: 1.05 }}
+                  >
+                    {item.label}
+                    {activeSection === item.id && (
+                      <motion.div
+                        layoutId="activeSection"
+                        className="absolute -bottom-1 left-0 right-0 h-0.5"
+                        style={{ backgroundColor: '#d4a574' }}
+                        transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                      />
+                    )}
+                  </motion.a>
+                ))}
+                
+                {/* Programs Dropdown */}
+                <div 
+                  className="relative"
+                  onMouseEnter={() => setIsProgramsOpen(true)}
+                  onMouseLeave={() => {
+                    setIsProgramsOpen(false);
+                    setIsBachelorOpen(false);
+                    setIsMasterOpen(false);
+                    setMasterCategoryOpen(null);
+                  }}
+                >
+                  <motion.a
+                    href="#programs"
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.2 }}
+                    className={`text-lg font-medium transition-all duration-300 relative whitespace-nowrap cursor-pointer ${
+                      activeSection === 'programs'
+                        ? 'text-[#d4a574]'
+                        : 'text-gray-700 hover:text-[#1a5443]'
+                    }`}
+                    whileHover={{ scale: 1.05 }}
+                  >
+                    {t('nav.programs')}
+                    {activeSection === 'programs' && (
+                      <motion.div
+                        layoutId="activeSection"
+                        className="absolute -bottom-1 left-0 right-0 h-0.5"
+                        style={{ backgroundColor: '#d4a574' }}
+                        transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                      />
+                    )}
+                  </motion.a>
+
+                  {/* Level 1: Bachelor and Master */}
+                  {isProgramsOpen && (
+                    <div className="absolute top-full left-0 mt-4 w-56 bg-white shadow-xl rounded-lg border border-gray-100 z-50">
+                      {/* Bachelor Item */}
+                      <div
+                        className="relative"
+                        onMouseEnter={() => {
+                          setIsBachelorOpen(true);
+                          setIsMasterOpen(false);
+                          setMasterCategoryOpen(null);
+                        }}
+                      >
+                        <div className="px-6 py-3 text-gray-700 hover:bg-gray-50 transition-colors font-medium cursor-pointer flex items-center justify-between">
+                          <span>Bachelor</span>
+                          <span className="text-gray-400">→</span>
+                        </div>
+                      </div>
+
+                      {/* Master Item */}
+                      <div
+                        className="relative border-t border-gray-100"
+                        onMouseEnter={() => {
+                          setIsMasterOpen(true);
+                          setIsBachelorOpen(false);
+                          setMasterCategoryOpen(null);
+                        }}
+                      >
+                        <div className="px-6 py-3 text-gray-700 hover:bg-gray-50 transition-colors font-medium cursor-pointer flex items-center justify-between">
+                          <span>Master</span>
+                          <span className="text-gray-400">→</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Bachelor Programs - appears to the right */}
+                  {isProgramsOpen && isBachelorOpen && (
+                    <div 
+                      className="absolute top-full left-56 mt-4 ml-2 w-96 bg-white shadow-xl rounded-lg overflow-hidden border border-gray-100 z-[60]"
+                      onMouseEnter={() => setIsBachelorOpen(true)}
+                      onMouseLeave={() => setIsBachelorOpen(false)}
+                    >
+                      {bachelorPrograms.map((program, idx) => (
+                        <a
+                          key={idx}
+                          href={program.href}
+                          className="block px-6 py-3 text-sm text-gray-700 hover:bg-gray-50 hover:text-[#1a5443] transition-colors border-b border-gray-100 last:border-b-0 whitespace-nowrap"
+                        >
+                          {program.label}
+                        </a>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Master Categories - appears to the right, lower position */}
+                  {isProgramsOpen && isMasterOpen && (
+                    <div 
+                      className="absolute top-full left-56 mt-[68px] ml-2 w-72 bg-white shadow-xl rounded-lg border border-gray-100 z-[60]"
+                      onMouseEnter={() => setIsMasterOpen(true)}
+                      onMouseLeave={() => {
+                        setIsMasterOpen(false);
+                        setMasterCategoryOpen(null);
+                      }}
+                    >
+                      {masterCategories.map((category, idx) => (
+                        <div
+                          key={category.id}
+                          onMouseEnter={() => setMasterCategoryOpen(category.id)}
+                        >
+                          <div className={`px-6 py-3 text-sm text-gray-700 hover:bg-gray-50 hover:text-[#1a5443] transition-colors cursor-pointer flex items-center justify-between whitespace-nowrap ${idx > 0 ? 'border-t border-gray-100' : ''}`}>
+                            <span>{category.label}</span>
+                            <span className="text-gray-400">→</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Master Programs - appears further to the right */}
+                  {isProgramsOpen && isMasterOpen && masterCategoryOpen && (
+                    <div 
+                      className="absolute top-full left-[344px] mt-[68px] ml-2 w-96 bg-white shadow-xl rounded-lg overflow-hidden border border-gray-100 z-[70]"
+                      onMouseEnter={() => setMasterCategoryOpen(masterCategoryOpen)}
+                      onMouseLeave={() => setMasterCategoryOpen(null)}
+                    >
+                      {masterProgramsByCategory[masterCategoryOpen as keyof typeof masterProgramsByCategory].map((program, pidx) => (
+                        <a
+                          key={pidx}
+                          href={program.href}
+                          className="block px-6 py-3 text-sm text-gray-700 hover:bg-gray-50 hover:text-[#1a5443] transition-colors border-b border-gray-100 last:border-b-0 whitespace-nowrap"
+                        >
+                          {program.label}
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {navItemsAfter.map((item, index) => (
+                  <motion.a
+                    key={item.label}
+                    href={item.href}
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: (index + 3) * 0.1 }}
                     className={`text-lg font-medium transition-all duration-300 relative whitespace-nowrap ${
                       activeSection === item.id
                         ? 'text-[#d4a574]'

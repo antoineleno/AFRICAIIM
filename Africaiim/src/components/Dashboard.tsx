@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { 
@@ -33,76 +33,179 @@ interface DashboardProps {
 
 export function Dashboard({ userEmail, onLogout }: DashboardProps) {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<'overview' | 'application' | 'admissions-process'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'application' | 'admissions-process'>('admissions-process');
   const [hasApplied, setHasApplied] = useState(false);
   const [applicationStatus, setApplicationStatus] = useState<'draft' | 'submitted' | 'under-review' | 'accepted'>('draft');
   const [showReview, setShowReview] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  
+  // Countries and Cities state
+  const [countries, setCountries] = useState<Array<{ name: string; code: string }>>([]);
+  const [cities, setCities] = useState<string[]>([]);
+  const [loadingCountries, setLoadingCountries] = useState(false);
+  const [loadingCities, setLoadingCities] = useState(false);
+  
   const [uploadedDocuments, setUploadedDocuments] = useState<Record<string, File | null>>({
-    profilePicture: null,
-    transcript: null,
-    passport: null,
-    cv: null,
-    motivationLetter: null,
-    languageTests: null,
-    universityTranscripts: null,
+    profilePicture: null, // Photo d'identité récente
+    idPassport: null, // Photocopie de la pièce d'identité ou du passeport
+    transcripts: null, // Copie certifiée des relevés de notes des deux dernières années
+    diplomas: null, // Diplôme(s) obtenu(s) ou attestation(s) de réussite
+    motivationEssay: null, // Essais de motivation
+    cv: null, // Curriculum Vitae (si entrée en Bachelor 2 ou 3)
   });
   
   const [formData, setFormData] = useState({
     // Personal Information
+    title: '', // Mme, Mle, M
     firstName: '',
     lastName: '',
     dateOfBirth: '',
+    birthCity: '',
+    birthCountry: '',
     nationality: '',
-    countryOfResidence: '',
-    city: '',
     address: '',
+    postalCode: '',
+    city: '',
     
     // Contact Information
     email: userEmail,
     phoneNumber: '',
-    alternatePhone: '',
+    mobilePhone: '',
     
     // Academic Background
-    highSchoolName: '',
-    highSchoolCountry: '',
-    graduationYear: '',
-    gpa: '',
+    lastDiploma: '', // Dernier diplôme obtenu
+    currentClass: '', // Classe actuelle
+    originInstitution: '', // Établissement d'origine
+    spokenLanguages: '', // Langues parlées / maîtrisées
+    centersOfInterest: '', // Centres d'intérêt
+    professionalPathOrInternships: '', // Parcours professionnel ou stages
     
-    // Previous Higher Education (if any)
-    previousUniversity: '',
-    previousDegree: '',
-    previousFieldOfStudy: '',
-    previousGraduationYear: '',
+    // Entry Level
+    entryLevel: '', // Bachelor 1, Bachelor 2, Bachelor 3
     
     // Program Selection
-    programChoice: 'Bachelor of Science (BSc) - Social Sciences, Management & Business Analytics',
-    specialization: '',
-    intakeYear: '',
-    intakeSemester: '',
+    programChoice: '',
     
-    // Language Proficiency
-    englishProficiency: '',
-    frenchProficiency: '',
-    englishTestScore: '',
-    frenchTestScore: '',
+    // Higher Education History
+    higherEducationYear: '',
+    higherEducationInstitution: '',
+    higherEducationDiploma: '',
+    higherEducationMention: '',
     
-    // Motivation
-    whyAFRICAIIM: '',
-    careerGoals: '',
-    academicInterests: '',
+    // Studies History
+    studiesYear: '',
+    studiesInstitution: '',
+    studiesDiploma: '',
+    studiesMention: '',
     
-    // Additional Information
-    extracurriculars: '',
-    workExperience: '',
-    references: '',
+    // Foreign Languages
+    language1: '',
+    language1Level: '',
+    language2: '',
+    language2Level: '',
+    language3: '',
+    language3Level: '',
+    
+    // Professional Experience
+    experience1Year: '',
+    experience1Company: '',
+    experience1Duration: '',
+    experience1Activity: '',
+    experience2Year: '',
+    experience2Company: '',
+    experience2Duration: '',
+    experience2Activity: '',
+    experience3Year: '',
+    experience3Company: '',
+    experience3Duration: '',
+    experience3Activity: '',
+    experience4Year: '',
+    experience4Company: '',
+    experience4Duration: '',
+    experience4Activity: '',
+    
+    // Family Situation
+    fatherProfession: '',
+    motherProfession: '',
+    numberOfBrothers: '',
+    numberOfSisters: '',
+    
+    // Career Goals
+    careerGoals: '', // Quelles sont les professions que vous envisagez d'exercer
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [name]: value,
     });
+    
+    // If country changes, fetch cities for that country
+    if (name === 'nationality') {
+      setCities([]);
+      setFormData(prev => ({ ...prev, city: '' }));
+      if (value) {
+        fetchCities(value);
+      }
+    }
+    
+    // If entry level changes, clear program choice
+    if (name === 'entryLevel') {
+      setFormData(prev => ({ ...prev, programChoice: '' }));
+    }
+  };
+
+  // Fetch countries on component mount
+  useEffect(() => {
+    const fetchCountries = async () => {
+      setLoadingCountries(true);
+      try {
+        const response = await fetch('https://restcountries.com/v3.1/all');
+        const data = await response.json();
+        const countryList = data
+          .map((country: any) => ({
+            name: country.name.common,
+            code: country.cca2,
+          }))
+          .sort((a: any, b: any) => a.name.localeCompare(b.name));
+        setCountries(countryList);
+      } catch (error) {
+        console.error('Error fetching countries:', error);
+      } finally {
+        setLoadingCountries(false);
+      }
+    };
+    
+    fetchCountries();
+  }, []);
+
+  // Fetch cities for selected country
+  const fetchCities = async (countryName: string) => {
+    setLoadingCities(true);
+    try {
+      // Using a cities API - you can replace this with your preferred API
+      const response = await fetch(`https://countriesnow.space/api/v0.1/countries/cities`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          country: countryName
+        })
+      });
+      const data = await response.json();
+      if (data.error === false && data.data) {
+        setCities(data.data.sort());
+      } else {
+        setCities([]);
+      }
+    } catch (error) {
+      console.error('Error fetching cities:', error);
+      setCities([]);
+    } finally {
+      setLoadingCities(false);
+    }
   };
 
   const handleSubmitApplication = (e: React.FormEvent) => {
@@ -178,16 +281,16 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
           className="bg-white rounded-xl shadow-md p-2 mb-8 flex gap-2"
         >
           <button
-            onClick={() => setActiveTab('overview')}
+            onClick={() => setActiveTab('admissions-process')}
             className={`flex-1 py-3 px-6 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 font-light ${
-              activeTab === 'overview'
+              activeTab === 'admissions-process'
                 ? 'text-white shadow-lg'
                 : 'text-gray-600 hover:bg-gray-50'
             }`}
-            style={activeTab === 'overview' ? { backgroundColor: '#1a5443' } : {}}
+            style={activeTab === 'admissions-process' ? { backgroundColor: '#1a5443' } : {}}
           >
-            <User size={20} />
-            <span>{t('dashboard.overview')}</span>
+            <GraduationCap size={20} />
+            <span>{t('dashboard.admissionsProcess')}</span>
           </button>
           <button
             onClick={() => setActiveTab('application')}
@@ -202,16 +305,16 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
             <span>{t('dashboard.application')}</span>
           </button>
           <button
-            onClick={() => setActiveTab('admissions-process')}
+            onClick={() => setActiveTab('overview')}
             className={`flex-1 py-3 px-6 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 font-light ${
-              activeTab === 'admissions-process'
+              activeTab === 'overview'
                 ? 'text-white shadow-lg'
                 : 'text-gray-600 hover:bg-gray-50'
             }`}
-            style={activeTab === 'admissions-process' ? { backgroundColor: '#1a5443' } : {}}
+            style={activeTab === 'overview' ? { backgroundColor: '#1a5443' } : {}}
           >
-            <GraduationCap size={20} />
-            <span>{t('dashboard.admissionsProcess')}</span>
+            <User size={20} />
+            <span>{t('dashboard.overview')}</span>
           </button>
         </motion.div>
 
@@ -373,8 +476,8 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                       onClick={handleSaveDraft}
-                      className="px-6 py-2 border-2 rounded-lg font-light transition-all duration-300"
-                      style={{ borderColor: '#d4a574', color: '#d4a574' }}
+                      className="px-6 py-3 border-2 rounded-lg font-normal text-white transition-all duration-300 shadow-md hover:shadow-lg"
+                      style={{ backgroundColor: '#d4a574', borderColor: '#d4a574' }}
                     >
                       {t('dashboard.saveDraft')}
                     </motion.button>
@@ -386,37 +489,53 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
                   <div>
                     <h3 className="text-xl font-normal mb-4 flex items-center gap-2" style={{ color: '#1a5443' }}>
                       <User size={24} />
-                      {t('dashboard.personalInformation')}
+                      Personal Information
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-light text-gray-700 mb-2">{t('dashboard.firstName')} *</label>
-                        <input
-                          type="text"
-                          name="firstName"
-                          value={formData.firstName}
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-light text-gray-700 mb-2">Title *</label>
+                        <select
+                          name="title"
+                          value={formData.title}
                           onChange={handleInputChange}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all"
-                          placeholder={t('dashboard.enterFirstName')}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all"
                           required
                           disabled={hasApplied}
-                        />
+                        >
+                          <option value="">Select Title</option>
+                          <option value="M">M (Mr.)</option>
+                          <option value="Mme">Mme (Mrs.)</option>
+                          <option value="Mle">Mle (Miss)</option>
+                        </select>
                       </div>
                       <div>
-                        <label className="block text-sm font-light text-gray-700 mb-2">{t('dashboard.lastName')} *</label>
+                        <label className="block text-sm font-light text-gray-700 mb-2">Last Name *</label>
                         <input
                           type="text"
                           name="lastName"
                           value={formData.lastName}
                           onChange={handleInputChange}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all"
-                          placeholder={t('dashboard.enterLastName')}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all"
+                          placeholder="Enter last name"
                           required
                           disabled={hasApplied}
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-light text-gray-700 mb-2">{t('dashboard.dateOfBirth')} *</label>
+                        <label className="block text-sm font-light text-gray-700 mb-2">First Name *</label>
+                        <input
+                          type="text"
+                          name="firstName"
+                          value={formData.firstName}
+                          onChange={handleInputChange}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all"
+                          placeholder="Enter first name"
+                          required
+                          disabled={hasApplied}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-light text-gray-700 mb-2">Date of Birth *</label>
                         <div className="relative">
                           <Calendar size={20} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                           <input
@@ -424,142 +543,135 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
                             name="dateOfBirth"
                             value={formData.dateOfBirth}
                             onChange={handleInputChange}
-                            className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all"
+                            className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all"
                             required
                             disabled={hasApplied}
                           />
                         </div>
                       </div>
                       <div>
-                        <label className="block text-sm font-light text-gray-700 mb-2">{t('dashboard.nationality')} *</label>
-                        <div className="relative">
-                          <Globe size={20} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                          <input
-                            type="text"
-                            name="nationality"
-                            value={formData.nationality}
-                            onChange={handleInputChange}
-                            className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all"
-                            placeholder={t('dashboard.yourNationality')}
-                            required
-                            disabled={hasApplied}
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-light text-gray-700 mb-2">{t('dashboard.countryOfResidence')} *</label>
+                        <label className="block text-sm font-light text-gray-700 mb-2">Country of Birth *</label>
                         <input
                           type="text"
-                          name="countryOfResidence"
-                          value={formData.countryOfResidence}
+                          name="birthCountry"
+                          value={formData.birthCountry}
                           onChange={handleInputChange}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all"
-                          placeholder={t('dashboard.currentCountry')}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all"
+                          placeholder="Country of birth"
                           required
                           disabled={hasApplied}
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-light text-gray-700 mb-2">{t('dashboard.city')} *</label>
+                        <label className="block text-sm font-light text-gray-700 mb-2">City of Birth *</label>
+                        <input
+                          type="text"
+                          name="birthCity"
+                          value={formData.birthCity}
+                          onChange={handleInputChange}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all"
+                          placeholder="City of birth"
+                          required
+                          disabled={hasApplied}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-light text-gray-700 mb-2">Nationality *</label>
                         <div className="relative">
-                          <MapPin size={20} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                          <input
-                            type="text"
-                            name="city"
-                            value={formData.city}
+                          <Globe size={20} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 z-10 pointer-events-none" />
+                          <select
+                            name="nationality"
+                            value={formData.nationality}
                             onChange={handleInputChange}
-                            className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all"
-                            placeholder={t('dashboard.yourCity')}
+                            className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all appearance-none bg-white"
                             required
-                            disabled={hasApplied}
-                          />
+                            disabled={hasApplied || loadingCountries}
+                          >
+                            <option value="">
+                              {loadingCountries ? 'Loading countries...' : 'Select your country'}
+                            </option>
+                            {countries.map((country) => (
+                              <option key={country.code} value={country.name}>
+                                {country.name}
+                              </option>
+                            ))}
+                          </select>
                         </div>
                       </div>
                       <div className="md:col-span-2">
-                        <label className="block text-sm font-light text-gray-700 mb-2">{t('dashboard.address')} *</label>
+                        <label className="block text-sm font-light text-gray-700 mb-2">Address *</label>
                         <input
                           type="text"
                           name="address"
                           value={formData.address}
                           onChange={handleInputChange}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all"
-                          placeholder={t('dashboard.fullAddress')}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all"
+                          placeholder="Full address"
                           required
                           disabled={hasApplied}
                         />
                       </div>
-                    </div>
-                  </div>
-
-                  {/* Passport Size Photo Upload */}
-                  <div>
-                    <h3 className="text-xl font-normal mb-4 flex items-center gap-2" style={{ color: '#1a5443' }}>
-                      <User size={24} />
-                      {t('dashboard.passportSizePhoto')}
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <label className="border-2 border-dashed border-gray-300 rounded-xl p-6 hover:border-gray-400 transition-all cursor-pointer block"
-                        style={uploadedDocuments.profilePicture ? { borderColor: '#1a5443', backgroundColor: '#f0f9f6' } : {}}>
-                        <div className="flex flex-col items-center justify-center text-center">
-                          {uploadedDocuments.profilePicture ? (
-                            <>
-                              <CheckCircle2 size={40} style={{ color: '#1a5443' }} className="mb-2" />
-                              <p className="text-sm font-normal text-gray-700">{uploadedDocuments.profilePicture.name}</p>
-                              <p className="text-xs font-light text-gray-600 mt-1">{t('dashboard.photoFormat')}</p>
-                              <span className="mt-3 px-4 py-2 text-sm rounded-lg transition-all duration-300 border-2" style={{ borderColor: '#1a5443', color: '#1a5443' }}>
-                                {t('dashboard.changePhoto')}
-                              </span>
-                            </>
+                      <div>
+                        <label className="block text-sm font-light text-gray-700 mb-2">Postal Code *</label>
+                        <input
+                          type="text"
+                          name="postalCode"
+                          value={formData.postalCode}
+                          onChange={handleInputChange}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all"
+                          placeholder="Postal code"
+                          required
+                          disabled={hasApplied}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-light text-gray-700 mb-2">City *</label>
+                        <div className="relative">
+                          <MapPin size={20} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 z-10 pointer-events-none" />
+                          {cities.length > 0 ? (
+                            <select
+                              name="city"
+                              value={formData.city}
+                              onChange={handleInputChange}
+                              className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all appearance-none bg-white"
+                              required
+                              disabled={hasApplied || loadingCities}
+                            >
+                              <option value="">
+                                {loadingCities ? 'Loading cities...' : 'Select your city'}
+                              </option>
+                              {cities.map((city) => (
+                                <option key={city} value={city}>
+                                  {city}
+                                </option>
+                              ))}
+                            </select>
                           ) : (
-                            <>
-                              <Upload size={32} className="text-gray-400 mb-2" />
-                              <p className="text-sm font-normal text-gray-700">{t('dashboard.passportSizePhoto')}</p>
-                              <p className="text-xs text-gray-500 font-light mt-1">{t('dashboard.photoFormat')}</p>
-                              <span className="mt-3 px-4 py-2 text-sm rounded-lg transition-all duration-300 border-2" style={{ borderColor: '#1a5443', color: '#1a5443' }}>
-                                {t('dashboard.uploadPhoto')}
-                              </span>
-                            </>
+                            <input
+                              type="text"
+                              name="city"
+                              value={formData.city}
+                              onChange={handleInputChange}
+                              className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all"
+                              placeholder={formData.nationality ? (loadingCities ? 'Loading cities...' : 'Enter your city') : 'Select country first'}
+                              required
+                              disabled={hasApplied || !formData.nationality || loadingCities}
+                            />
                           )}
-                          <input
-                            type="file"
-                            accept=".jpg,.jpeg,.png"
-                            onChange={(e) => handleDocumentUpload(e, 'profilePicture')}
-                            className="hidden"
-                            disabled={hasApplied}
-                          />
                         </div>
-                      </label>
-                      {uploadedDocuments.profilePicture && (
-                        <div className="flex items-center justify-center p-6 rounded-lg border-2" style={{ borderColor: '#d4a57430', backgroundColor: '#f9f9f9' }}>
-                          <img
-                            src={URL.createObjectURL(uploadedDocuments.profilePicture)}
-                            alt="Profile Preview"
-                            className="max-h-48 max-w-48 rounded-lg object-cover"
-                          />
-                        </div>
-                      )}
+                      </div>
                     </div>
                   </div>
 
                   {/* Contact Information */}
                   <div>
                     <h3 className="text-xl font-normal mb-4 flex items-center gap-2" style={{ color: '#1a5443' }}>
-                      <Mail size={24} />
-                      {t('dashboard.contactInformation')}
+                      <Phone size={24} />
+                      Contact Information
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-light text-gray-700 mb-2">{t('dashboard.emailAddress')} *</label>
-                        <input
-                          type="email"
-                          name="email"
-                          value={formData.email}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50"
-                          disabled
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-light text-gray-700 mb-2">{t('dashboard.phoneNumber')} *</label>
+                        <label className="block text-sm font-light text-gray-700 mb-2">Phone *</label>
                         <div className="relative">
                           <Phone size={20} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                           <input
@@ -567,25 +679,39 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
                             name="phoneNumber"
                             value={formData.phoneNumber}
                             onChange={handleInputChange}
-                            className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all"
-                            placeholder="+1 234 567 8900"
+                            className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all"
+                            placeholder="+224 XXX XX XX XX"
                             required
                             disabled={hasApplied}
                           />
                         </div>
                       </div>
                       <div>
-                        <label className="block text-sm font-light text-gray-700 mb-2">{t('dashboard.alternatePhone')}</label>
+                        <label className="block text-sm font-light text-gray-700 mb-2">Mobile *</label>
                         <div className="relative">
                           <Phone size={20} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                           <input
                             type="tel"
-                            name="alternatePhone"
-                            value={formData.alternatePhone}
+                            name="mobilePhone"
+                            value={formData.mobilePhone}
                             onChange={handleInputChange}
-                            className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all"
-                            placeholder="+1 234 567 8900"
+                            className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all"
+                            placeholder="+224 XXX XX XX XX"
+                            required
                             disabled={hasApplied}
+                          />
+                        </div>
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-light text-gray-700 mb-2">Email *</label>
+                        <div className="relative">
+                          <Mail size={20} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                          <input
+                            type="email"
+                            name="email"
+                            value={formData.email}
+                            className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all bg-gray-50"
+                            disabled
                           />
                         </div>
                       </div>
@@ -596,370 +722,687 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
                   <div>
                     <h3 className="text-xl font-normal mb-4 flex items-center gap-2" style={{ color: '#1a5443' }}>
                       <GraduationCap size={24} />
-                      {t('dashboard.academicBackground')}
+                      Academic Background
                     </h3>
-                    <div className="space-y-6">
-                      <div className="p-4 rounded-lg" style={{ backgroundColor: '#f0f9f6' }}>
-                        <p className="text-sm font-normal mb-4" style={{ color: '#1a5443' }}>{t('dashboard.highSchoolEducation')}</p>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-sm font-light text-gray-700 mb-2">High School Name *</label>
-                            <input
-                              type="text"
-                              name="highSchoolName"
-                              value={formData.highSchoolName}
-                              onChange={handleInputChange}
-                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all bg-white"
-                              placeholder="Name of your high school"
-                              required
-                              disabled={hasApplied}
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-light text-gray-700 mb-2">Country *</label>
-                            <input
-                              type="text"
-                              name="highSchoolCountry"
-                              value={formData.highSchoolCountry}
-                              onChange={handleInputChange}
-                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all bg-white"
-                              placeholder="Country"
-                              required
-                              disabled={hasApplied}
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-light text-gray-700 mb-2">Graduation Year *</label>
-                            <input
-                              type="number"
-                              name="graduationYear"
-                              value={formData.graduationYear}
-                              onChange={handleInputChange}
-                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all bg-white"
-                              placeholder="2024"
-                              min="1950"
-                              max="2030"
-                              required
-                              disabled={hasApplied}
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-light text-gray-700 mb-2">GPA / Grade *</label>
-                            <input
-                              type="text"
-                              name="gpa"
-                              value={formData.gpa}
-                              onChange={handleInputChange}
-                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all bg-white"
-                              placeholder="e.g., 3.8/4.0 or 85%"
-                              required
-                              disabled={hasApplied}
-                            />
-                          </div>
-                        </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-light text-gray-700 mb-2">Last Diploma Obtained *</label>
+                        <input
+                          type="text"
+                          name="lastDiploma"
+                          value={formData.lastDiploma}
+                          onChange={handleInputChange}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all"
+                          placeholder="e.g., Baccalauréat, Licence, BTS, etc."
+                          required
+                          disabled={hasApplied}
+                        />
                       </div>
-
-                      <div className="p-4 rounded-lg border-2 border-dashed border-gray-300">
-                        <p className="text-sm font-normal mb-4 text-gray-700">Previous Higher Education (Optional)</p>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-sm font-light text-gray-700 mb-2">University Name</label>
-                            <input
-                              type="text"
-                              name="previousUniversity"
-                              value={formData.previousUniversity}
-                              onChange={handleInputChange}
-                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all"
-                              placeholder="Name of university"
-                              disabled={hasApplied}
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-light text-gray-700 mb-2">Degree Type</label>
-                            <input
-                              type="text"
-                              name="previousDegree"
-                              value={formData.previousDegree}
-                              onChange={handleInputChange}
-                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all"
-                              placeholder="e.g., Bachelor's"
-                              disabled={hasApplied}
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-light text-gray-700 mb-2">Field of Study</label>
-                            <input
-                              type="text"
-                              name="previousFieldOfStudy"
-                              value={formData.previousFieldOfStudy}
-                              onChange={handleInputChange}
-                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all"
-                              placeholder="Major/Field"
-                              disabled={hasApplied}
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-light text-gray-700 mb-2">Graduation Year</label>
-                            <input
-                              type="number"
-                              name="previousGraduationYear"
-                              value={formData.previousGraduationYear}
-                              onChange={handleInputChange}
-                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all"
-                              placeholder="Year"
-                              min="1950"
-                              max="2030"
-                              disabled={hasApplied}
-                            />
-                          </div>
-                        </div>
+                      <div>
+                        <label className="block text-sm font-light text-gray-700 mb-2">Current Class *</label>
+                        <input
+                          type="text"
+                          name="currentClass"
+                          value={formData.currentClass}
+                          onChange={handleInputChange}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all"
+                          placeholder="e.g., Terminale, Première Année, etc."
+                          required
+                          disabled={hasApplied}
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-light text-gray-700 mb-2">Origin Institution *</label>
+                        <input
+                          type="text"
+                          name="originInstitution"
+                          value={formData.originInstitution}
+                          onChange={handleInputChange}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all"
+                          placeholder="Name of your previous school/university"
+                          required
+                          disabled={hasApplied}
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-light text-gray-700 mb-2">Spoken/Mastered Languages *</label>
+                        <input
+                          type="text"
+                          name="spokenLanguages"
+                          value={formData.spokenLanguages}
+                          onChange={handleInputChange}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all"
+                          placeholder="e.g., French, English, Portuguese"
+                          required
+                          disabled={hasApplied}
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-light text-gray-700 mb-2">Centers of Interest *</label>
+                        <input
+                          type="text"
+                          name="centersOfInterest"
+                          value={formData.centersOfInterest}
+                          onChange={handleInputChange}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all"
+                          placeholder="Your hobbies and interests"
+                          required
+                          disabled={hasApplied}
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-light text-gray-700 mb-2">Professional Path or Internships</label>
+                        <input
+                          type="text"
+                          name="professionalPathOrInternships"
+                          value={formData.professionalPathOrInternships}
+                          onChange={handleInputChange}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all"
+                          placeholder="Describe your professional experience or internships (if applicable)"
+                          disabled={hasApplied}
+                        />
                       </div>
                     </div>
                   </div>
 
-                  {/* Program Selection */}
+                  {/* Entry Level & Program Selection */}
                   <div>
                     <h3 className="text-xl font-normal mb-4 flex items-center gap-2" style={{ color: '#1a5443' }}>
                       <BookOpen size={24} />
-                      {t('dashboard.programSelection')}
+                      Entry Level & Program Selection
                     </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="md:col-span-3">
-                        <label className="block text-sm font-light text-gray-700 mb-2">{t('dashboard.program')} *</label>
-                        <div className="p-4 rounded-lg border-2" style={{ borderColor: '#1a5443', backgroundColor: '#f0f9f6' }}>
-                          <p className="font-normal mb-1" style={{ color: '#1a5443' }}>
-                            {t('dashboard.bachelorOfScience')}
-                          </p>
-                          <p className="text-sm text-gray-600 font-light">
-                            {t('dashboard.programDescription')}
-                          </p>
-                          <p className="text-xs text-gray-500 font-light mt-2">
-                            {t('dashboard.programDetails')}
-                          </p>
-                        </div>
-                        <input
-                          type="hidden"
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-light text-gray-700 mb-2">Desired Entry Level *</label>
+                        <select
+                          name="entryLevel"
+                          value={formData.entryLevel}
+                          onChange={handleInputChange}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all"
+                          required
+                          disabled={hasApplied}
+                        >
+                          <option value="">Select entry level</option>
+                          <option value="Bachelor 1">Bachelor 1</option>
+                          <option value="Bachelor 2">Bachelor 2</option>
+                          <option value="Bachelor 3">Bachelor 3</option>
+                          <option value="Master Initial">Master Initial</option>
+                          <option value="Master Executive">Master Executive</option>
+                        </select>
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-light text-gray-700 mb-2">Program Choice *</label>
+                        <select
                           name="programChoice"
-                          value="Bachelor of Science (BSc) - Social Sciences, Management & Business Analytics"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-light text-gray-700 mb-2">{t('dashboard.preferredSpecialization')} *</label>
-                        <select
-                          name="specialization"
-                          value={formData.specialization || ''}
+                          value={formData.programChoice}
                           onChange={handleInputChange}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all"
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all"
                           required
-                          disabled={hasApplied}
+                          disabled={hasApplied || !formData.entryLevel}
                         >
-                          <option value="">{t('dashboard.selectSpecialization')}</option>
-                          <option value="Business Analytics">{t('dashboard.businessAnalytics')}</option>
-                          <option value="Strategic Management & Leadership">{t('dashboard.strategicManagement')}</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-light text-gray-700 mb-2">{t('dashboard.intakeYear')} *</label>
-                        <select
-                          name="intakeYear"
-                          value={formData.intakeYear}
-                          onChange={handleInputChange}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all"
-                          required
-                          disabled={hasApplied}
-                        >
-                          <option value="">{t('dashboard.selectYear')}</option>
-                          <option value="2026">2026</option>
-                          <option value="2027">2027</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-light text-gray-700 mb-2">{t('dashboard.intakeSemester')} *</label>
-                        <select
-                          name="intakeSemester"
-                          value={formData.intakeSemester}
-                          onChange={handleInputChange}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all"
-                          required
-                          disabled={hasApplied}
-                        >
-                          <option value="">{t('dashboard.selectSemester')}</option>
-                          <option value="Fall">{t('dashboard.fall')}</option>
-                          <option value="Spring">{t('dashboard.spring')}</option>
+                          <option value="">{formData.entryLevel ? 'Select your program' : 'Select entry level first'}</option>
+                          {(formData.entryLevel === 'Bachelor 1' || formData.entryLevel === 'Bachelor 2' || formData.entryLevel === 'Bachelor 3') && (
+                            <optgroup label="Bachelor Programs">
+                              <option value="Bachelor Grande École - Management, Sciences Sociales & IA">Bachelor Grande École - Management, Sciences Sociales & IA</option>
+                              <option value="Bachelor Banque & Assurance">Bachelor Banque & Assurance</option>
+                              <option value="Bachelor Comptabilité & Gestion">Bachelor Comptabilité & Gestion</option>
+                            </optgroup>
+                          )}
+                          {formData.entryLevel === 'Master Initial' && (
+                            <optgroup label="Master Initial (2 ans)">
+                              <option value="Master Transformation Digitale et Management des Outils Digitaux">Master Transformation Digitale et Management des Outils Digitaux</option>
+                              <option value="Master Cybersécurité et Management des Systèmes d'informations">Master Cybersécurité et Management des Systèmes d'informations</option>
+                              <option value="Master Management de Business Unit et Stratégies Financières">Master Management de Business Unit et Stratégies Financières</option>
+                              <option value="Master Management Supply Chain Achat Logistique">Master Management Supply Chain Achat Logistique</option>
+                              <option value="Master Gestion des Ressources Humaines">Master Gestion des Ressources Humaines</option>
+                              <option value="Master Gestion des Projets">Master Gestion des Projets</option>
+                            </optgroup>
+                          )}
+                          {formData.entryLevel === 'Master Executive' && (
+                            <optgroup label="Master Executive (1 an)">
+                              <option value="Master Ingénierie Financière">Master Ingénierie Financière</option>
+                              <option value="Master Management des établissements de Santé">Master Management des établissements de Santé</option>
+                              <option value="Master Achats et Logistiques">Master Achats et Logistiques</option>
+                              <option value="Master Stratégie d'entreprise">Master Stratégie d'entreprise</option>
+                              <option value="Master Executive - Gestion des Ressources Humaines">Master Executive - Gestion des Ressources Humaines</option>
+                              <option value="Master Executive - Gestion des Projets">Master Executive - Gestion des Projets</option>
+                            </optgroup>
+                          )}
                         </select>
                       </div>
                     </div>
                   </div>
 
-                  {/* Language Proficiency */}
+                  {/* Higher Education History - Only for Master Programs */}
+                  {(formData.entryLevel === 'Master Initial' || formData.entryLevel === 'Master Executive') && (
+                    <div>
+                      <h3 className="text-xl font-normal mb-4 flex items-center gap-2" style={{ color: '#1a5443' }}>
+                        <GraduationCap size={24} />
+                        Higher Education History
+                      </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-light text-gray-700 mb-2">Year</label>
+                        <input
+                          type="text"
+                          name="higherEducationYear"
+                          value={formData.higherEducationYear}
+                          onChange={handleInputChange}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all"
+                          placeholder="e.g., 2023-2024"
+                          disabled={hasApplied}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-light text-gray-700 mb-2">Institution/City</label>
+                        <input
+                          type="text"
+                          name="higherEducationInstitution"
+                          value={formData.higherEducationInstitution}
+                          onChange={handleInputChange}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all"
+                          placeholder="Institution name and city"
+                          disabled={hasApplied}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-light text-gray-700 mb-2">Diploma</label>
+                        <input
+                          type="text"
+                          name="higherEducationDiploma"
+                          value={formData.higherEducationDiploma}
+                          onChange={handleInputChange}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all"
+                          placeholder="Diploma name"
+                          disabled={hasApplied}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-light text-gray-700 mb-2">Mention</label>
+                        <input
+                          type="text"
+                          name="higherEducationMention"
+                          value={formData.higherEducationMention}
+                          onChange={handleInputChange}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all"
+                          placeholder="Honors/Grade"
+                          disabled={hasApplied}
+                        />
+                      </div>
+                    </div>
+                    </div>
+                  )}
+
+                  {/* Studies History */}
+                  <div>
+                    <h3 className="text-xl font-normal mb-4 flex items-center gap-2" style={{ color: '#1a5443' }}>
+                      <BookOpen size={24} />
+                      Studies History
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-light text-gray-700 mb-2">Year</label>
+                        <input
+                          type="text"
+                          name="studiesYear"
+                          value={formData.studiesYear}
+                          onChange={handleInputChange}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all"
+                          placeholder="e.g., 2021-2022"
+                          disabled={hasApplied}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-light text-gray-700 mb-2">Institution/City</label>
+                        <input
+                          type="text"
+                          name="studiesInstitution"
+                          value={formData.studiesInstitution}
+                          onChange={handleInputChange}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all"
+                          placeholder="Institution name and city"
+                          disabled={hasApplied}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-light text-gray-700 mb-2">Diploma</label>
+                        <input
+                          type="text"
+                          name="studiesDiploma"
+                          value={formData.studiesDiploma}
+                          onChange={handleInputChange}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all"
+                          placeholder="Diploma name"
+                          disabled={hasApplied}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-light text-gray-700 mb-2">Mention</label>
+                        <input
+                          type="text"
+                          name="studiesMention"
+                          value={formData.studiesMention}
+                          onChange={handleInputChange}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all"
+                          placeholder="Honors/Grade"
+                          disabled={hasApplied}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Foreign Languages */}
                   <div>
                     <h3 className="text-xl font-normal mb-4 flex items-center gap-2" style={{ color: '#1a5443' }}>
                       <Languages size={24} />
-                      {t('dashboard.languageProficiency')}
+                      Foreign Languages
                     </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="p-4 rounded-lg border-2 border-gray-200">
-                        <p className="font-normal mb-3" style={{ color: '#1a5443' }}>{t('dashboard.englishProficiency')} *</p>
-                        <select
-                          name="englishProficiency"
-                          value={formData.englishProficiency}
-                          onChange={handleInputChange}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all mb-3"
-                          required
-                          disabled={hasApplied}
-                        >
-                          <option value="">{t('dashboard.selectLevel')}</option>
-                          <option value="Native">{t('dashboard.nativeSpeaker')}</option>
-                          <option value="Fluent">{t('dashboard.fluent')}</option>
-                          <option value="Advanced">{t('dashboard.advanced')}</option>
-                          <option value="Intermediate">{t('dashboard.intermediate')}</option>
-                          <option value="Basic">{t('dashboard.basic')}</option>
-                        </select>
-                        <label className="block text-sm font-light text-gray-700 mb-2">{t('dashboard.testScoreTOEFL')}</label>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-light text-gray-700 mb-2">Language I</label>
+                          <input
+                            type="text"
+                            name="language1"
+                            value={formData.language1}
+                            onChange={handleInputChange}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all"
+                            placeholder="e.g., English"
+                            disabled={hasApplied}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-light text-gray-700 mb-2">Level</label>
+                          <select
+                            name="language1Level"
+                            value={formData.language1Level}
+                            onChange={handleInputChange}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all"
+                            disabled={hasApplied}
+                          >
+                            <option value="">Select level</option>
+                            <option value="A1">A1 - Beginner</option>
+                            <option value="A2">A2 - Elementary</option>
+                            <option value="B1">B1 - Intermediate</option>
+                            <option value="B2">B2 - Upper Intermediate</option>
+                            <option value="C1">C1 - Advanced</option>
+                            <option value="C2">C2 - Proficient</option>
+                            <option value="Native">Native</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-light text-gray-700 mb-2">Language II</label>
+                          <input
+                            type="text"
+                            name="language2"
+                            value={formData.language2}
+                            onChange={handleInputChange}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all"
+                            placeholder="e.g., French"
+                            disabled={hasApplied}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-light text-gray-700 mb-2">Level</label>
+                          <select
+                            name="language2Level"
+                            value={formData.language2Level}
+                            onChange={handleInputChange}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all"
+                            disabled={hasApplied}
+                          >
+                            <option value="">Select level</option>
+                            <option value="A1">A1 - Beginner</option>
+                            <option value="A2">A2 - Elementary</option>
+                            <option value="B1">B1 - Intermediate</option>
+                            <option value="B2">B2 - Upper Intermediate</option>
+                            <option value="C1">C1 - Advanced</option>
+                            <option value="C2">C2 - Proficient</option>
+                            <option value="Native">Native</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-light text-gray-700 mb-2">Language III</label>
+                          <input
+                            type="text"
+                            name="language3"
+                            value={formData.language3}
+                            onChange={handleInputChange}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all"
+                            placeholder="e.g., Spanish"
+                            disabled={hasApplied}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-light text-gray-700 mb-2">Level</label>
+                          <select
+                            name="language3Level"
+                            value={formData.language3Level}
+                            onChange={handleInputChange}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all"
+                            disabled={hasApplied}
+                          >
+                            <option value="">Select level</option>
+                            <option value="A1">A1 - Beginner</option>
+                            <option value="A2">A2 - Elementary</option>
+                            <option value="B1">B1 - Intermediate</option>
+                            <option value="B2">B2 - Upper Intermediate</option>
+                            <option value="C1">C1 - Advanced</option>
+                            <option value="C2">C2 - Proficient</option>
+                            <option value="Native">Native</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Professional Experience - Only for Master Programs */}
+                  {(formData.entryLevel === 'Master Initial' || formData.entryLevel === 'Master Executive') && (
+                    <div>
+                      <h3 className="text-xl font-normal mb-4 flex items-center gap-2" style={{ color: '#1a5443' }}>
+                        <FileText size={24} />
+                        Professional Experience
+                      </h3>
+                      <div className="space-y-4">
+                        <div className="p-4 rounded-lg" style={{ backgroundColor: '#f0f9f6' }}>
+                          <p className="text-sm font-normal mb-3" style={{ color: '#1a5443' }}>Experience 1</p>
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                          <div>
+                            <label className="block text-sm font-light text-gray-700 mb-2">Year</label>
+                            <input
+                              type="text"
+                              name="experience1Year"
+                              value={formData.experience1Year}
+                              onChange={handleInputChange}
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all bg-white"
+                              placeholder="2024"
+                              disabled={hasApplied}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-light text-gray-700 mb-2">Company/Place</label>
+                            <input
+                              type="text"
+                              name="experience1Company"
+                              value={formData.experience1Company}
+                              onChange={handleInputChange}
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all bg-white"
+                              placeholder="Company name"
+                              disabled={hasApplied}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-light text-gray-700 mb-2">Duration</label>
+                            <input
+                              type="text"
+                              name="experience1Duration"
+                              value={formData.experience1Duration}
+                              onChange={handleInputChange}
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all bg-white"
+                              placeholder="3 months"
+                              disabled={hasApplied}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-light text-gray-700 mb-2">Nature of Activity</label>
+                            <input
+                              type="text"
+                              name="experience1Activity"
+                              value={formData.experience1Activity}
+                              onChange={handleInputChange}
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all bg-white"
+                              placeholder="Role/Position"
+                              disabled={hasApplied}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      <div className="p-4 rounded-lg border-2 border-dashed border-gray-300">
+                        <p className="text-sm font-normal mb-3 text-gray-700">Experience 2</p>
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                          <div>
+                            <label className="block text-sm font-light text-gray-700 mb-2">Year</label>
+                            <input
+                              type="text"
+                              name="experience2Year"
+                              value={formData.experience2Year}
+                              onChange={handleInputChange}
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all"
+                              placeholder="2023"
+                              disabled={hasApplied}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-light text-gray-700 mb-2">Company/Place</label>
+                            <input
+                              type="text"
+                              name="experience2Company"
+                              value={formData.experience2Company}
+                              onChange={handleInputChange}
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all"
+                              placeholder="Company name"
+                              disabled={hasApplied}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-light text-gray-700 mb-2">Duration</label>
+                            <input
+                              type="text"
+                              name="experience2Duration"
+                              value={formData.experience2Duration}
+                              onChange={handleInputChange}
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all"
+                              placeholder="6 months"
+                              disabled={hasApplied}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-light text-gray-700 mb-2">Nature of Activity</label>
+                            <input
+                              type="text"
+                              name="experience2Activity"
+                              value={formData.experience2Activity}
+                              onChange={handleInputChange}
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all"
+                              placeholder="Role/Position"
+                              disabled={hasApplied}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      <div className="p-4 rounded-lg border-2 border-dashed border-gray-300">
+                        <p className="text-sm font-normal mb-3 text-gray-700">Experience 3</p>
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                          <div>
+                            <label className="block text-sm font-light text-gray-700 mb-2">Year</label>
+                            <input
+                              type="text"
+                              name="experience3Year"
+                              value={formData.experience3Year}
+                              onChange={handleInputChange}
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all"
+                              placeholder="2022"
+                              disabled={hasApplied}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-light text-gray-700 mb-2">Company/Place</label>
+                            <input
+                              type="text"
+                              name="experience3Company"
+                              value={formData.experience3Company}
+                              onChange={handleInputChange}
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all"
+                              placeholder="Company name"
+                              disabled={hasApplied}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-light text-gray-700 mb-2">Duration</label>
+                            <input
+                              type="text"
+                              name="experience3Duration"
+                              value={formData.experience3Duration}
+                              onChange={handleInputChange}
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all"
+                              placeholder="4 months"
+                              disabled={hasApplied}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-light text-gray-700 mb-2">Nature of Activity</label>
+                            <input
+                              type="text"
+                              name="experience3Activity"
+                              value={formData.experience3Activity}
+                              onChange={handleInputChange}
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all"
+                              placeholder="Role/Position"
+                              disabled={hasApplied}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      <div className="p-4 rounded-lg border-2 border-dashed border-gray-300">
+                        <p className="text-sm font-normal mb-3 text-gray-700">Experience 4</p>
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                          <div>
+                            <label className="block text-sm font-light text-gray-700 mb-2">Year</label>
+                            <input
+                              type="text"
+                              name="experience4Year"
+                              value={formData.experience4Year}
+                              onChange={handleInputChange}
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all"
+                              placeholder="2021"
+                              disabled={hasApplied}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-light text-gray-700 mb-2">Company/Place</label>
+                            <input
+                              type="text"
+                              name="experience4Company"
+                              value={formData.experience4Company}
+                              onChange={handleInputChange}
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all"
+                              placeholder="Company name"
+                              disabled={hasApplied}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-light text-gray-700 mb-2">Duration</label>
+                            <input
+                              type="text"
+                              name="experience4Duration"
+                              value={formData.experience4Duration}
+                              onChange={handleInputChange}
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all"
+                              placeholder="2 months"
+                              disabled={hasApplied}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-light text-gray-700 mb-2">Nature of Activity</label>
+                            <input
+                              type="text"
+                              name="experience4Activity"
+                              value={formData.experience4Activity}
+                              onChange={handleInputChange}
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all"
+                              placeholder="Role/Position"
+                              disabled={hasApplied}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    </div>
+                  )}
+
+                  {/* Family Situation */}
+                  <div>
+                    <h3 className="text-xl font-normal mb-4 flex items-center gap-2" style={{ color: '#1a5443' }}>
+                      <User size={24} />
+                      Family Situation
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-light text-gray-700 mb-2">Father's Profession</label>
                         <input
                           type="text"
-                          name="englishTestScore"
-                          value={formData.englishTestScore}
+                          name="fatherProfession"
+                          value={formData.fatherProfession}
                           onChange={handleInputChange}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all"
-                          placeholder={t('dashboard.testScorePlaceholder')}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all"
+                          placeholder="Father's profession"
                           disabled={hasApplied}
                         />
                       </div>
-                      <div className="p-4 rounded-lg border-2 border-gray-200">
-                        <p className="font-normal mb-3" style={{ color: '#1a5443' }}>{t('dashboard.frenchProficiency')} *</p>
-                        <select
-                          name="frenchProficiency"
-                          value={formData.frenchProficiency}
-                          onChange={handleInputChange}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all mb-3"
-                          required
-                          disabled={hasApplied}
-                        >
-                          <option value="">{t('dashboard.selectLevel')}</option>
-                          <option value="Native">{t('dashboard.nativeSpeaker')}</option>
-                          <option value="Fluent">{t('dashboard.fluent')}</option>
-                          <option value="Advanced">{t('dashboard.advanced')}</option>
-                          <option value="Intermediate">{t('dashboard.intermediate')}</option>
-                          <option value="Basic">{t('dashboard.basic')}</option>
-                        </select>
-                        <label className="block text-sm font-light text-gray-700 mb-2">{t('dashboard.testScoreDELF')}</label>
+                      <div>
+                        <label className="block text-sm font-light text-gray-700 mb-2">Mother's Profession</label>
                         <input
                           type="text"
-                          name="frenchTestScore"
-                          value={formData.frenchTestScore}
+                          name="motherProfession"
+                          value={formData.motherProfession}
                           onChange={handleInputChange}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all"
-                          placeholder={t('dashboard.testScoreDELFPlaceholder')}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all"
+                          placeholder="Mother's profession"
+                          disabled={hasApplied}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-light text-gray-700 mb-2">Number of Brothers</label>
+                        <input
+                          type="number"
+                          name="numberOfBrothers"
+                          value={formData.numberOfBrothers}
+                          onChange={handleInputChange}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all"
+                          placeholder="0"
+                          min="0"
+                          disabled={hasApplied}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-light text-gray-700 mb-2">Number of Sisters</label>
+                        <input
+                          type="number"
+                          name="numberOfSisters"
+                          value={formData.numberOfSisters}
+                          onChange={handleInputChange}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all"
+                          placeholder="0"
+                          min="0"
                           disabled={hasApplied}
                         />
                       </div>
                     </div>
                   </div>
-
-                  {/* Motivation & Goals */}
+                  
                   <div>
                     <h3 className="text-xl font-normal mb-4 flex items-center gap-2" style={{ color: '#1a5443' }}>
                       <Award size={24} />
-                      {t('dashboard.motivationAndGoals')}
+                      Career Goals
                     </h3>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-light text-gray-700 mb-2">
-                          {t('dashboard.whyAFRICAIIM')}
-                        </label>
-                        <textarea
-                          name="whyAFRICAIIM"
-                          value={formData.whyAFRICAIIM}
-                          onChange={handleInputChange}
-                          rows={6}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all resize-none"
-                          placeholder={t('dashboard.whyAFRICAIIMPlaceholder')}
-                          required
-                          disabled={hasApplied}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-light text-gray-700 mb-2">
-                          {t('dashboard.careerGoals')}
-                        </label>
-                        <textarea
-                          name="careerGoals"
-                          value={formData.careerGoals}
-                          onChange={handleInputChange}
-                          rows={4}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all resize-none"
-                          placeholder={t('dashboard.careerGoalsPlaceholder')}
-                          required
-                          disabled={hasApplied}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-light text-gray-700 mb-2">
-                          {t('dashboard.academicInterests')}
-                        </label>
-                        <textarea
-                          name="academicInterests"
-                          value={formData.academicInterests}
-                          onChange={handleInputChange}
-                          rows={4}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all resize-none"
-                          placeholder={t('dashboard.academicInterestsPlaceholder')}
-                          disabled={hasApplied}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Additional Information */}
-                  <div>
-                    <h3 className="text-xl font-normal mb-4 flex items-center gap-2" style={{ color: '#1a5443' }}>
-                      <FileUp size={24} />
-                      {t('dashboard.additionalInformation')}
-                    </h3>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-light text-gray-700 mb-2">
-                          {t('dashboard.extracurricularActivities')}
-                        </label>
-                        <textarea
-                          name="extracurriculars"
-                          value={formData.extracurriculars}
-                          onChange={handleInputChange}
-                          rows={4}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all resize-none"
-                          placeholder={t('dashboard.extracurricularPlaceholder')}
-                          disabled={hasApplied}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-light text-gray-700 mb-2">
-                          {t('dashboard.workExperience')}
-                        </label>
-                        <textarea
-                          name="workExperience"
-                          value={formData.workExperience}
-                          onChange={handleInputChange}
-                          rows={4}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all resize-none"
-                          placeholder={t('dashboard.workExperiencePlaceholder')}
-                          disabled={hasApplied}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-light text-gray-700 mb-2">
-                          {t('dashboard.references')}
-                        </label>
-                        <textarea
-                          name="references"
-                          value={formData.references}
-                          onChange={handleInputChange}
-                          rows={3}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all resize-none"
-                          placeholder={t('dashboard.referencesPlaceholder')}
-                          disabled={hasApplied}
-                        />
-                      </div>
+                    <div>
+                      <label className="block text-sm font-light text-gray-700 mb-2">
+                        What professions do you plan to pursue after your studies? *
+                      </label>
+                      <textarea
+                        name="careerGoals"
+                        value={formData.careerGoals}
+                        onChange={handleInputChange}
+                        rows={5}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a5443] focus:ring-opacity-50 transition-all resize-none"
+                        placeholder="Describe your career goals and the professions you envision..."
+                        required
+                        disabled={hasApplied}
+                      />
                     </div>
                   </div>
 
@@ -967,17 +1410,26 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
                   <div>
                     <h3 className="text-xl font-normal mb-4 flex items-center gap-2" style={{ color: '#1a5443' }}>
                       <Upload size={24} />
-                      {hasApplied ? t('dashboard.uploadedDocuments') : t('dashboard.requiredDocuments')}
+                      Required Documents
                     </h3>
                     <div className="space-y-3">
                       {[
-                        { name: 'High School Transcript', key: 'transcript', required: true },
-                        { name: 'Passport/ID Copy', key: 'passport', required: true },
-                        { name: 'Curriculum Vitae (CV)', key: 'cv', required: true },
-                        { name: 'Motivation Letter', key: 'motivationLetter', required: true },
-                        { name: 'Language Test Certificates', key: 'languageTests', required: false },
-                        { name: 'Previous University Transcripts', key: 'universityTranscripts', required: false },
-                      ].map((doc) => (
+                        { name: 'Photo d\'identité récente (Recent ID Photo)', key: 'profilePicture', required: true },
+                        { name: 'Photocopie de la pièce d\'identité ou du passeport (ID/Passport Copy)', key: 'idPassport', required: true },
+                        { name: 'Copie certifiée des relevés de notes des deux dernières années (Certified Transcripts)', key: 'transcripts', required: true },
+                        { name: 'Diplôme(s) obtenu(s) ou attestation(s) de réussite (Diplomas/Certificates)', key: 'diplomas', required: true },
+                        { name: 'Essais de motivation (Motivation Essay)', key: 'motivationEssay', required: true },
+                        { name: 'Curriculum Vitae (CV) - Bachelor 2/3 ou Master', key: 'cv', required: false },
+                      ].filter(doc => {
+                        // Show CV only for Bachelor 2, Bachelor 3, or Master programs
+                        if (doc.key === 'cv') {
+                          return formData.entryLevel === 'Bachelor 2' || 
+                                 formData.entryLevel === 'Bachelor 3' || 
+                                 formData.entryLevel === 'Master Initial' || 
+                                 formData.entryLevel === 'Master Executive';
+                        }
+                        return true;
+                      }).map((doc) => (
                         hasApplied ? (
                           // Read-only view when application is submitted
                           uploadedDocuments[doc.key] && (
@@ -1052,7 +1504,7 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
                       <div className="flex items-start gap-3 mb-6">
                         <input type="checkbox" id="terms" required className="mt-1" />
                         <label htmlFor="terms" className="text-sm text-gray-600 font-light">
-                          {t('dashboard.certificationText')}
+                          I certify that all information provided in this application is accurate and complete.
                         </label>
                       </div>
                       <motion.button
@@ -1062,7 +1514,7 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
                         className="w-full py-4 text-white rounded-xl font-normal text-lg shadow-xl hover:shadow-2xl transition-all duration-300"
                         style={{ backgroundColor: '#1a5443' }}
                       >
-                        {t('dashboard.submitApplication')}
+                        Submit Application
                       </motion.button>
                     </div>
                   )}

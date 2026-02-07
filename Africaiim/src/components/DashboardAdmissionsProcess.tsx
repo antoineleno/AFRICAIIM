@@ -23,28 +23,20 @@ export function DashboardAdmissionsProcess() {
       color: '#d4a574',
     },
     {
-      icon: UserCheck,
-      number: '03',
-      title: t('dashboard.step3Title'),
-      description: t('dashboard.step3Description'),
-      timeline: t('dashboard.step3Timeline'),
-      color: '#1a5443',
-    },
-    {
       icon: CheckCircle,
-      number: '04',
+      number: '03',
       title: t('dashboard.step4Title'),
       description: t('dashboard.step4Description'),
       timeline: t('dashboard.step4Timeline'),
-      color: '#d4a574',
+      color: '#1a5443',
     },
     {
       icon: Calendar,
-      number: '05',
+      number: '04',
       title: t('dashboard.step5Title'),
       description: t('dashboard.step5Description'),
       timeline: t('dashboard.step5Timeline'),
-      color: '#1a5443',
+      color: '#d4a574',
     },
   ];
 
